@@ -147,7 +147,7 @@ bash run_long_command_test.sh
 <summary>全量持久化的实现</summary>
 
 功能解决的问题|功能入口|输入数据|核心步骤|关键代码|
-|---|---|---|---|---|---|
+|---|---|---|---|---|
 |解决内存数据掉电丢失、日志重放慢的问题|配置文件选择RDB持久化模式时, 1.数据保存: 由SAVE操作触发kvs_engine_save(), 2.数据加载: init_kvengine()初始化引擎时完成数据加载, kvs_hash_create|持久化文件路径, 全局引擎数据结构|数据保存: 打开持久化文件->创建io_uring的SQ和CQ->遍历内存引擎数据结构逐条处理数据->对每条KV数据构造rdb_write_req_t结构体(二进制数据部分=keylen,key,vallen,value,crc32,逗号为结构性说明,实际不保存)->将结构体中的二进制数据提交到写请求->累计多个写请求提交一次\r\n数据加载: 打开持久化文件并记录文件长度->使用mmap(只读)映射磁盘文件内容到进程虚拟内存, 并返回指针->循环读二进制文件,加载kv数据并校验crc32|kvsotre/src/kvs_engine_rdb_save,kvsotre/src/kvs_engine_rdb_load|
 </details>
 
