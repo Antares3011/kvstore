@@ -159,16 +159,7 @@ bash run_long_command_test.sh
 |解决内存数据掉电丢失、日志重放慢的问题|配置文件选择RDB持久化模式时, 1.数据保存: 由SAVE操作触发kvs_engine_save(), 2.数据加载: init_kvengine()初始化引擎时完成数据加载, kvs_hash_create|持久化文件路径, 全局引擎数据结构|数据保存: 打开持久化文件->创建io_uring的SQ和CQ->遍历内存引擎数据结构逐条处理数据->对每条KV数据构造rdb_write_req_t结构体(二进制数据部分=keylen,key,vallen,value,crc32,逗号为结构性说明,实际不保存)->将结构体中的二进制数据提交到写请求->累计多个写请求提交一次\r\n数据加载: 打开持久化文件并记录文件长度->使用mmap(只读)映射磁盘文件内容到进程虚拟内存, 并返回指针->循环读二进制文件,加载kv数据并校验crc32|kvsotre/src/kvs_engine_rdb_save,kvsotre/src/kvs_engine_rdb_load|
 </details>
 
-<details>
-<summary>RESP2协议的实现</summary>
-功能解决的问题: 解决了TCP字节流没有消息边界的问题, 二进制安全(按给定长度读取原始字节，只对 " 转义), 支持批量指令
-核心逻辑: 
-|请求|请求结构体|实际内容|请求字节流|
+| 请求 | 请求结构体 | 实际内容 | 请求字节流 |
 |---|---|---|---|
-|SET "key" "value"|typedef struct resp_request {<br> int argc;                 //参数量<br> char **argv;              //指向参数内容的指针<br>size_t *argv_len;         //参数长度<br> } resp_request_t;           //请求结构体<br> |argc = 3 <br>argv = ["SET", "key", "value"] <br>argv_len = {3, 3, 5}<br>|*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n
-   
-    resp_encode_request(): 将用户输入命令解析为请求结构体
-    resp_encode_stream(): 将请求结构体编码为RESP2协议格式的字节流
-    resp_decode_request(): 将字节流解析为请求结构体
-关键代码: kvsotre/src/RESP2/kvs_resp.c
-</details>
+| SET "key" "value" | typedef struct resp_request {<br>   int argc; //参数量<br>   char **argv; //指向参数内容的指针<br>   size_t *argv_len; //参数长度<br>   } resp_request_t; | argc = 3 <br> argv = ["SET", "key", "value"] <br> argv_len = {3, 3, 5} | *3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n |
+
