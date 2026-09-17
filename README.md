@@ -163,13 +163,12 @@ bash run_long_command_test.sh
 <summary>RESP2协议的实现</summary>
 功能解决的问题: 解决了TCP字节流没有消息边界的问题, 二进制安全(按给定长度读取原始字节，只对 " 转义), 支持批量指令
 核心逻辑: 
-    |请求|请求结构体|实际内容|请求字节流|
-    |---|---|---|---|
-    |SET "a" "1"|typedef struct resp_request {<br> int argc;                 //参数量<br> char **argv;              //指向参数内容的指针<br>size_t *argv_len;         //参数长度<br> } resp_request_t;           //请求结构体<br> |argc = 3 <br>argv = ["SET", "a", "1"] <br>argv_len = {3, 1, 1}<br>|*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n
+|请求|请求结构体|实际内容|请求字节流|
+|---|---|---|---|
+|SET "key" "value"|typedef struct resp_request {<br> int argc;                 //参数量<br> char **argv;              //指向参数内容的指针<br>size_t *argv_len;         //参数长度<br> } resp_request_t;           //请求结构体<br> |argc = 3 <br>argv = ["SET", "key", "value"] <br>argv_len = {3, 3, 5}<br>|*3\r\n$3\r\nSET\r\n$3\r\nkey\r\n$5\r\nvalue\r\n
    
     resp_encode_request(): 将用户输入命令解析为请求结构体
     resp_encode_stream(): 将请求结构体编码为RESP2协议格式的字节流
     resp_decode_request(): 将字节流解析为请求结构体
 关键代码: kvsotre/src/RESP2/kvs_resp.c
 </details>
-
