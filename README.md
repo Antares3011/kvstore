@@ -158,8 +158,9 @@ bash run_long_command_test.sh
 输入数据: 持久化文件路径, 全局引擎数据结构
 
 核心步骤: 
-1.数据保存: 打开持久化文件->创建io_uring的SQ和CQ->遍历内存引擎数据结构逐条处理数据->对每条KV数据构造rdb_write_req_t结构体(二进制数据部分=keylen,key,vallen,value,crc32,逗号为结构性说明,实际不保存)->将结构体中的二进制数据提交到写请求->累计多个写请求提交一次
-2.数据加载: 打开持久化文件并记录文件长度->使用mmap(只读)映射磁盘文件内容到进程虚拟内存, 并返回指针->循环读二进制文件,加载kv数据并校验crc32
+    1.数据保存: 打开持久化文件->创建io_uring的SQ和CQ->遍历内存引擎数据结构逐条处理数据->对每条KV数据构造rdb_write_req_t结构体(二进制数据部分=keylen,key,vallen,value,crc32,逗号为结构性说明,实际不保存)->将结构体中的二进制数据提交到写请求->累计多个写请求提交一次
+
+    2.数据加载: 打开持久化文件并记录文件长度->使用mmap(只读)映射磁盘文件内容到进程虚拟内存, 并返回指针->循环读二进制文件,加载kv数据并校验crc32
 
 关键代码: kvsotre/src/kvs_engine_rdb_save,kvsotre/src/kvs_engine_rdb_load
 </details>
@@ -175,9 +176,9 @@ bash run_long_command_test.sh
 
 核心步骤: 
 
-1.数据保存: kvs_filter_protocol()过滤到写操作时, 如果操作成功执行->persist_request()将RESP编码后的命令写入缓冲区->wal_write()读取,并落盘命令
+    1.数据保存: kvs_filter_protocol()过滤到写操作时, 如果操作成功执行->persist_request()将RESP编码后的命令写入缓冲区->wal_write()读取,并落盘命令
 
-2.数据加载: kvs_engine_load()->engine_replay_log()->mmap()将日志文件映射到进程虚拟内存->循环读取文件.解码并重放日志命令
+    2.数据加载: kvs_engine_load()->engine_replay_log()->mmap()将日志文件映射到进程虚拟内存->循环读取文件.解码并重放日志命令
 
 关键代码: kvsotre/src/kvs_engine_aof_save,kvsotre/src/kvs_engine_aof_load/
 </details>
@@ -193,9 +194,9 @@ bash run_long_command_test.sh
 
 多级分配:    
 
-小对象(<=4096B): 首次分配时, 根据申请大小归入 16B～4096B 共 9 个规格之一, 并从底层内存池申请一个 4096B Page；Page 按对应规格划分为若干等大小 block, 页内通过空闲链表管理 block. 相同规格的小对象优先从该规格已有且存在空闲 block 的 Page 中分配; 当已有 Page 均满时创建新 Page; 当某 Page 中所有 block 均被释放时.将整个 Page 回收到底层空闲链表。
+    小对象(<=4096B): 首次分配时, 根据申请大小归入 16B～4096B 共 9 个规格之一, 并从底层内存池申请一个 4096B Page；Page 按对应规格划分为若干等大小 block, 页内通过空闲链表管理 block. 相同规格的小对象优先从该规格已有且存在空闲 block 的 Page 中分配; 当已有 Page 均满时创建新 Page; 当某 Page 中所有 block 均被释放时.将整个 Page 回收到底层空闲链表。
 
-大对象(>4096B): 将申请大小向上对齐到 4096B 的整数倍, 直接从底层内存池分配连续空间, 并通过大块链表 large_list 记录该大对象的地址和实际分配大小; 释放时根据该记录将整块空间归还到底层空闲链表. 
+    大对象(>4096B): 将申请大小向上对齐到 4096B 的整数倍, 直接从底层内存池分配连续空间, 并通过大块链表 large_list 记录该大对象的地址和实际分配大小; 释放时根据该记录将整块空间归还到底层空闲链表. 
 
 关键代码: kvsotre/src/kvs_mempool.c
 </details>
@@ -227,9 +228,9 @@ resp_decode_request(): 将字节流解析为请求结构体
 
 核心步骤: 
 
-客户端实现多指令拼接: 为了让输入更加直观, 客户端要求逐行输入命令, 输入空行+回车时, 逐行编码用户命令为resp2格式命令并拼接至发送缓冲区, 随后执行一次send.
+    客户端实现多指令拼接: 为了让输入更加直观, 客户端要求逐行输入命令, 输入空行+回车时, 逐行编码用户命令为resp2格式命令并拼接至发送缓冲区, 随后执行一次send.
 
-服务端实现多指令帧分隔: 服务端server_reader()协程循环将对应fd的数据recv到buf1, 随后执行recv_buf_append()扩容函数动态扩容buf2, 并将buf1复制到buf2尾部, 当buf2长度不为0时(存在命令), 循环执行resp_decode_request()解码buf中的命令并返回命令完整度, 解码到完整命令则消费该命令, 消费缓冲区并执行下一轮解码, 解码到不完整命令则退出到上层循环继续接收命令.(命令执行速度瓶颈在resp_decode_request()解码命令) 
+    服务端实现多指令帧分隔: 服务端server_reader()协程循环将对应fd的数据recv到buf1, 随后执行recv_buf_append()扩容函数动态扩容buf2, 并将buf1复制到buf2尾部, 当buf2长度不为0时(存在命令), 循环执行resp_decode_request()解码buf中的命令并返回命令完整度, 解码到完整命令则消费该命令, 消费缓冲区并执行下一轮解码, 解码到不完整命令则退出到上层循环继续接收命令.(命令执行速度瓶颈在resp_decode_request()解码命令) 
 
 关键代码: kvsotre/src/network/kvs_ntyco.c kvsotre/src/RESP2/kvs_resp.c
 </details>
@@ -244,27 +245,27 @@ resp_decode_request(): 将字节流解析为请求结构体
 
 核心步骤: 
 
-首次同步逻辑: 主节点启动客户端服务协程后, rdma线程在同步端口监听, rdma线程会开启主节点的同步服务m_sync_server()并等待从节点链接, 从节点启动 s_sync_server()服务与主节点链接, 主节点生成二进制快照并注册内存区域, 从节点rdma read完成同步.
+    首次同步逻辑: 主节点启动客户端服务协程后, rdma线程在同步端口监听, rdma线程会开启主节点的同步服务m_sync_server()并等待从节点链接, 从节点启动 s_sync_server()服务与主节点链接, 主节点生成二进制快照并注册内存区域, 从节点rdma read完成同步.
 
-m_sync_server()的rdma逻辑: 
+    m_sync_server()的rdma逻辑: 
 
-1.**等待连接事件**.通过rdma_create_event_channel()建立连接管理事件通道->rdma_create_id()绑定监听fd->rdma_bind_addr()绑定地址->rdma_listen()启动监听->rdma_get_cm_event()阻塞等待来自从节点的连接事件->
+        1.**等待连接事件**.通过rdma_create_event_channel()建立连接管理事件通道->rdma_create_id()绑定监听fd->rdma_bind_addr()绑定地址->rdma_listen()启动监听->rdma_get_cm_event()阻塞等待来自从节点的连接事件->
 
-2.**事件到达**.rdma_setup_qp()创建PD保护域,创建完成队列CQ,绑定队列对(SQ,RQ)
+        2.**事件到达**.rdma_setup_qp()创建PD保护域,创建完成队列CQ,绑定队列对(SQ,RQ)
 
-3.**生成快照**.kvs_rdma_rdb_create()生成kv数据快照并使用ibv_reg_mr()注册内存区域, 填充快照信息(remote_addr/rkey/data_len), 提前提交接收从节点对快照的ACK的请求
+        3.**生成快照**.kvs_rdma_rdb_create()生成kv数据快照并使用ibv_reg_mr()注册内存区域, 填充快照信息(remote_addr/rkey/data_len), 提前提交接收从节点对快照的ACK的请求
 
-4.**建立连接**.rdma_accept()接收来自从节点的connect, 发送应答报文顺带返回快照元数据
+        4.**建立连接**.rdma_accept()接收来自从节点的connect, 发送应答报文顺带返回快照元数据
 
-5.**等待同步成功**.rdma_wait_cq()
+        5.**等待同步成功**.rdma_wait_cq()
 
-s_sync_server()的rdma逻辑:
+    s_sync_server()的rdma逻辑:
 
-1.**主动连接**.rdma_create_event_channel()->rdma_create_id()->rdma_setup_qp()->rdma_connect()
+        1.**主动连接**.rdma_create_event_channel()->rdma_create_id()->rdma_setup_qp()->rdma_connect()
 
-2.**获取快照**.客户端收到后主节点的应答报文后, 解析其捎带的param, 获取remote_addr/rkey/data_len, 包装读请求后, ibv_post_send()发送请求,rdma_wait_cq()等待读请求完成
+        2.**获取快照**.客户端收到后主节点的应答报文后, 解析其捎带的param, 获取remote_addr/rkey/data_len, 包装读请求后, ibv_post_send()发送请求,rdma_wait_cq()等待读请求完成
 
-3.**解析快照**.kvs_rdma_rdb_load()
+        3.**解析快照**.kvs_rdma_rdb_load()
 
 关键代码: kvsotre/src/network/kvs_ntyco.c kvsotre/src/kvs_sync.c 
 </details>
@@ -277,14 +278,15 @@ s_sync_server()的rdma逻辑:
 
 核心步骤: 
 
-增量同步逻辑: 首次同步后, 主节点在该线程的m_sync_server()中加载ebpf程序, 过滤用户的写操作, 并通过tcp转发给从节点的replication_server()增量服务.
-主节点的ebpf逻辑: 
+    整体逻辑: 首次同步后, 主节点在该线程的m_sync_server()中加载ebpf程序, 过滤用户的写操作, 并通过tcp转发给从节点的replication_server()增量服务.
 
-1.捕获写命令(ebpf程序). 段标记write_marks, 加载ebpf程序时创建bpf map对象, 返回fd供BPF程序/用户态读写->设置探针SEC挂载到命令执行入口("uprobe/execute_request")->execute_request()触发capture_write_command(),解析命令结构体, 捕获写命令并复制进write_marks
+    主节点的ebpf逻辑: 
 
-2.消息复制队列(). 在命令执行函数execute_request()的入口执行repl_capture_request(), 消费一个write_marks, 将其加入消息复制队列
+    1.捕获写命令(ebpf程序). 段标记write_marks, 加载ebpf程序时创建bpf map对象, 返回fd供BPF程序/用户态读写->设置探针SEC挂载到命令执行入口("uprobe/execute_request")->execute_request()触发capture_write_command(),解析命令结构体, 捕获写命令并复制进write_marks
 
-3.主节点主动连接从节点->bpf_object__open_file()打开ebpf程序->bpf_object__load()把已经open好的eBPF ELF对象加载进内核->bpf_object__find_program_by_name()从已加载bpf_object按名字查找 eBPF 程序实例(capture_write_command), 用于后续attach挂载->bpf_object__find_map_fd_by_name()从bpf_object按map名获取map的fd, 供用户态读写BPF映射(write_marks)->find_function_offset()解析目标 ELF，取出指定函数在二进制内的文件偏移->bpf_program__attach_uprobe_opts()在当前进程二进制文件内offset位置挂载uprobe探针->持续执行消息出队和增量转发
+    2.消息复制队列(). 在命令执行函数execute_request()的入a口执行repl_capture_request(), 消费一个write_marks, 将其加入消息复制队列
+
+    3.主节点主动连接从节点->bpf_object__open_file()打开ebpf程序->bpf_object__load()把已经open好的eBPF ELF对象加载进内核->bpf_object__find_program_by_name()从已加载bpf_object按名字查找 eBPF 程序实例(capture_write_command), 用于后续attach挂载->bpf_object__find_map_fd_by_name()从bpf_object按map名获取map的fd, 供用户态读写BPF映射(write_marks)->find_function_offset()解析目标 ELF，取出指定函数在二进制内的文件偏移->bpf_program__attach_uprobe_opts()在当前进程二进制文件内offset位置挂载uprobe探针->持续执行消息出队和增量转发
 
 关键代码: kvsotre/src/network/kvs_ntyco.c kvsotre/src/kvs_sync.c 
 </details>
