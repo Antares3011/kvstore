@@ -182,6 +182,7 @@ bash run_long_command_test.sh
 
 <details>
 <summary>RESP2协议的实现</summary>
+
 功能解决的问题: 解决了TCP字节流没有消息边界的问题, 二进制安全(按给定长度读取原始字节，只对 " 转义), 支持批量指令
 核心逻辑: 
 |请求|请求结构体|实际内容|请求字节流|
@@ -195,6 +196,7 @@ bash run_long_command_test.sh
 
 <details>
 <summary>批量指令多指令识别的实现</summary>
+
 功能解决的问题: 单指令并发时, 网络层多次执行send()触发系统调用, cpu频繁切换开销大, 因而实现支持多指令拼接一次性发送和接收
 核心步骤: 
     客户端实现多指令拼接: 为了让输入更加直观, 客户端要求逐行输入命令, 输入空行+回车时, 逐行编码用户命令为resp2格式命令并拼接至发送缓冲区, 随后执行一次send.
@@ -204,6 +206,7 @@ bash run_long_command_test.sh
 
 <details>
 <summary>RESP2协议的实现</summary>
+
 功能解决的问题: 解决了TCP字节流没有消息边界的问题, 二进制安全(按给定长度读取原始字节，只对 " 转义), 支持批量指令
 核心逻辑: 
 | 请求 | 请求结构体 | 实际内容 | 请求字节流 |
@@ -218,6 +221,7 @@ bash run_long_command_test.sh
 
 <details>
 <summary>主从同步->首次同步的实现</summary>
+
 功能解决的问题: 解决从节点首次连接主节点时的数据同步问题, 从节点通过CM与主节点连接,并用 RDMA Read 拉取主库内存里的全量数据，CPU 不参与数据拷贝
 功能入口: m_sync_server(), s_sync_server()
 核心步骤: 
